@@ -1,0 +1,9 @@
+Name:           anacube
+Version:        0.1
+License:        MIT
+Author:			Pedro Martins <pedromartins.pt@gmail.com>
+Maintainer:		Pedro Martins <pedromartins.pt@gmail.com>
+build-depends:  base
+
+Executable:     anacube
+Main-Is:        Main.hs
