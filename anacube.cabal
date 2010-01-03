@@ -1,9 +1,13 @@
-Name:           anacube
-Version:        0.1
-License:        MIT
-Author:			Pedro Martins <pedromartins.pt@gmail.com>
-Maintainer:		Pedro Martins <pedromartins.pt@gmail.com>
-build-depends:  base
+Name:               anacube
+Version:            0.1
+Description:        Anaglyph 3D Puzzle Game
+License:            MIT
+Author:		    	Pedro Martins <pedromartins.pt@gmail.com>
+Maintainer:		    Pedro Martins <pedromartins.pt@gmail.com>
+Build-Type:         Simple
+Cabal-Version:      >= 1.2
 
-Executable:     anacube
-Main-Is:        Main.hs
+Executable anacube
+    Main-Is:        Main.hs
+    Build-Depends:  base, FieldTrip, GLUT
+
