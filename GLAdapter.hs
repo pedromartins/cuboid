@@ -10,7 +10,7 @@ resizeScene s@(Size width height) = do
   viewport   $= (Position 0 0, s)
   matrixMode $= Projection
   loadIdentity
-  perspective 75 (w2/h2) 0.001 1000
+  perspective 75 (w2/h2) 1 1000
   matrixMode $= Modelview 0
   flush
  where
