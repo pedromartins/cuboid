@@ -106,14 +106,33 @@ parseInput = proc i -> do
     as    <- countKey 'a' -< down
     ss    <- countKey 's' -< down
     ds    <- countKey 'd' -< down
-    upEvs <- arr (filterE ((==(SpecialKey KeyUp)) . key)) -< down
-    speed <- constant 1 -< upEvs
-
-    returnA -< Game { rotX      = (fromInteger $ (ws - ss)),
+    upEvs <- filterKey (SpecialKey KeyUp) -< down
+    -- TODO: will be a vector
+    pspeed <- ((constant 0) &&& identity) `switch` (\_ -> constant 0.5) -< upEvs
+    -- TODO: will be a vector integral
+    rec coll  <- collision (obstacles levelChoice) ^>> boolToEvent -< posZ    
+        speed <- identity `switch` (\_ -> constant 0) -< (pspeed, coll)
+        posZ  <- (integral :: SF Double Double) -< speed
+ 
+    -- TODO: watch for leak on ws/as/ss/ds
+    returnA -< Game { level     = levelChoice ,
+                      rotX      = (fromInteger $ (ws - ss)),
                       rotY      = (fromInteger $ (ds - as)),
-                      playerPos = P3D 0 0 speed              }
+                      playerPos = calculatePPos $ posZ }
 
-    where countKey c = filterE ((==(Char c)) . key) ^>> countHold
+    where calculatePPos posZ = vector3 0 0 posZ ^+^
+                                (p3DtoV3 $ startingPoint levelChoice) 
+
+          -- TODO: will be vectorial
+          collision obss pos = any 
+            (\obs -> (abs (pos + (fromInteger . z $ startingPoint levelChoice) 
+                     + 1.0 - (fromInteger $ z obs)) <= 0.001) 
+                     && (x obs == 0) && (y obs == 0))
+            obss
+          countKey c  = filterE ((==(Char c)) . key) ^>> countHold
+          filterKey k = arr $ filterE ((==k) . key)
+          levelChoice = testLevel
+          boolToEvent = arr (\bool -> if bool then Event () else NoEvent)
 
 -- | Main, initializes Yampa and sets up reactimation loop
 main :: IO ()
