@@ -4,7 +4,7 @@ module Main where
 import FRP.Yampa
 import FRP.Yampa.Vector3
 import FRP.Yampa.Utilities
-import Graphics.UI.GLUT hiding (Level,Vector3(..))
+import Graphics.UI.GLUT hiding (Level,Vector3(..),normalize)
 import qualified Graphics.UI.GLUT as G(Vector3(..))
 
 import Data.IORef
@@ -107,32 +107,29 @@ parseInput = proc i -> do
     ss    <- countKey 's' -< down
     ds    <- countKey 'd' -< down
     upEvs <- filterKey (SpecialKey KeyUp) -< down
-    -- TODO: will be a vector
-    pspeed <- ((constant 0) &&& identity) `switch` (\_ -> constant 0.5) -< upEvs
-    -- TODO: will be a vector integral
-    rec coll  <- collision (obstacles levelChoice) ^>> boolToEvent -< posZ    
-        speed <- identity `switch` (\_ -> constant 0) -< (pspeed, coll)
-        posZ  <- (integral :: SF Double Double) -< speed
+    pspeed <- ((constant zeroSpeed) &&& identity) `switch` 
+                (\_ -> constant movingSpeed) -< upEvs
+    rec coll  <- collision (obstacles levelChoice) ^>> boolToEvent -< pos    
+        speed <- identity `switch` (\_ -> constant zeroSpeed) -< (pspeed, coll)
+        pos  <- (integral :: SF (Vector3 Double) (Vector3 Double)) -< speed
  
     -- TODO: watch for leak on ws/as/ss/ds
     returnA -< Game { level     = levelChoice ,
                       rotX      = (fromInteger $ (ws - ss)),
                       rotY      = (fromInteger $ (ds - as)),
-                      playerPos = calculatePPos $ posZ }
+                      playerPos = calculatePPos $ pos }
 
-    where calculatePPos posZ = vector3 0 0 posZ ^+^
-                                (p3DtoV3 $ startingPoint levelChoice) 
+    where calculatePPos pos = pos ^+^ (p3DtoV3 $ startingPoint levelChoice) 
 
-          -- TODO: will be vectorial
           collision obss pos = any 
-            (\obs -> (abs (pos + (fromInteger . z $ startingPoint levelChoice) 
-                     + 1.0 - (fromInteger $ z obs)) <= 0.001) 
-                     && (x obs == 0) && (y obs == 0))
-            obss
+            (\obs -> norm ((calculatePPos pos) ^+^ (normalize movingSpeed) 
+                            ^-^ (p3DtoV3 obs)) <= 0.001) obss
           countKey c  = filterE ((==(Char c)) . key) ^>> countHold
           filterKey k = arr $ filterE ((==k) . key)
           levelChoice = testLevel
           boolToEvent = arr (\bool -> if bool then Event () else NoEvent)
+          zeroSpeed   = vector3 0 0 0
+          movingSpeed = vector3 0 0 0.5
 
 -- | Main, initializes Yampa and sets up reactimation loop
 main :: IO ()
