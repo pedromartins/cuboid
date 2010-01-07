@@ -9,7 +9,8 @@ import qualified Graphics.UI.GLUT as G(Vector3(..))
 
 import Data.IORef
 import Control.Arrow
-import Data.Monoid
+import Data.Maybe
+import Data.List
 
 import GLAdapter
 
@@ -97,46 +98,60 @@ game = arr $ (\gs -> do
         renderGame gs
         flush)
 
--- TODO: separate input from logic
+data ParsedInput = 
+    ParsedInput { ws :: Integer, as :: Integer, ss :: Integer, ds :: Integer,
+                  upEvs :: Event Input, downEvs :: Event Input, 
+                  rightEvs :: Event Input, leftEvs :: Event Input }
+                        
 -- | Input
-parseInput :: SF (Event Input) GameState
+parseInput :: SF (Event Input) ParsedInput
 parseInput = proc i -> do
     down  <- keyDowns     -< i
     ws    <- countKey 'w' -< down
     as    <- countKey 'a' -< down
     ss    <- countKey 's' -< down
     ds    <- countKey 'd' -< down
-    upEvs <- filterKey (SpecialKey KeyUp) -< down
-    pspeed <- ((constant zeroSpeed) &&& identity) `switch` 
-                (\_ -> constant movingSpeed) -< upEvs
-    rec coll  <- collision (obstacles levelChoice) ^>> boolToEvent -< pos    
-        speed <- identity `switch` (\_ -> constant zeroSpeed) -< (pspeed, coll)
-        pos  <- (integral :: SF (Vector3 Double) (Vector3 Double)) -< speed
+    upEvs    <- filterKey (SpecialKey KeyUp)    -< down
+    downEvs  <- filterKey (SpecialKey KeyDown)  -< down
+    rightEvs <- filterKey (SpecialKey KeyRight) -< down
+    leftEvs  <- filterKey (SpecialKey KeyLeft)  -< down
+    returnA -< ParsedInput ws as ss ds upEvs downEvs rightEvs leftEvs
+    where countKey c  = filterE ((==(Char c)) . key) ^>> countHold
+          filterKey k = arr $ filterE ((==k) . key)
+
+-- | Logic
+calculateState :: SF ParsedInput GameState
+calculateState = proc pi@(ParsedInput ws as ss ds _ _ _ _) -> do
+    rec speed <- selectSpeed -< (pi, pos, speed)
+        pos <- (integral :: SF (Vector3 Double) (Vector3 Double)) -< speed
  
     -- TODO: watch for leak on ws/as/ss/ds
-    returnA -< Game { level     = levelChoice ,
+    returnA -< Game { level     = levelChoice,
                       rotX      = (fromInteger $ (ws - ss)),
                       rotY      = (fromInteger $ (ds - as)),
                       playerPos = calculatePPos $ pos }
 
     where calculatePPos pos = pos ^+^ (p3DtoV3 $ startingPoint levelChoice) 
-
-          collision obss pos = any 
-            (\obs -> norm ((calculatePPos pos) ^+^ (normalize movingSpeed) 
-                            ^-^ (p3DtoV3 obs)) <= 0.001) obss
-          countKey c  = filterE ((==(Char c)) . key) ^>> countHold
-          filterKey k = arr $ filterE ((==k) . key)
+          collision obss (_,pos,speed) = 
+            any (\obs -> norm ((calculatePPos pos) ^+^ (3 *^ speed) 
+                        ^-^ (p3DtoV3 obs)) <= 0.001) obss
           levelChoice = testLevel
-          boolToEvent = arr (\bool -> if bool then Event () else NoEvent)
           zeroSpeed   = vector3 0 0 0
           movingSpeed = vector3 0 0 0.5
+          boolToEvent = arr (\bool -> if bool then Event () else NoEvent)
+          -- TODO: ONLY SWITCHES ONCE! Use rSwitch!
+          selectSpeed :: SF (ParsedInput, Vector3 Double, Vector3 Double) (Vector3 Double)
+          selectSpeed = (constant zeroSpeed &&& arr (upEvs . (\(x,y,z) -> x))) `dSwitch`
+                          (\_ -> (constant movingSpeed &&&
+                                  (collision (obstacles levelChoice) ^>> boolToEvent)) `dSwitch`
+                                    (\_ -> constant zeroSpeed))
 
 -- | Main, initializes Yampa and sets up reactimation loop
 main :: IO ()
 main = do
     newInput <- newIORef NoEvent
     rh <- reactInit initGL (\_ _ b -> b >> return False) 
-                    (parseInput >>> game)
+                    (parseInput >>> calculateState >>> game)
     displayCallback $= return ()
     keyboardMouseCallback $= Just 
         (\k ks m _ -> writeIORef newInput (Event $ Keyboard k ks m))
