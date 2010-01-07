@@ -2,8 +2,10 @@
 module Main where
 
 import FRP.Yampa
+import FRP.Yampa.Vector3
 import FRP.Yampa.Utilities
-import Graphics.UI.GLUT hiding (Level)
+import Graphics.UI.GLUT hiding (Level,Vector3(..))
+import qualified Graphics.UI.GLUT as G(Vector3(..))
 
 import Data.IORef
 import Control.Arrow
@@ -19,24 +21,28 @@ data Input = Keyboard { key       :: Key,
 -- | Rendering Code:
 
 data Point3D = P3D { x :: Integer, y :: Integer, z :: Integer }
+p3DtoV3 (P3D x y z) = vector3 (fromInteger x) (fromInteger y) (fromInteger z)
 
--- size is unncessary!!
+vectorApply f v = vector3 (f $ vector3X v) (f $ vector3Y v) (f $ vector3Z v)
+
 data Level = Level { startingPoint :: Point3D, obstacles :: [Point3D] }
 
 size :: Level -> Integer
 size = (+1) . maximum . map (\(P3D x y z) -> maximum [x,y,z]) . obstacles
 
-data GameState = Game { rotX      :: Double, 
+data GameState = Game { level     :: Level,
+                        rotX      :: Double, 
                         rotY      :: Double, 
-                        playerPos :: Point3D }
+                        playerPos :: Vector3 Double }
 
 type R = Double
 
-testLevel = Level (P3D 0 0 1) [P3D 0 0 0, P3D 5 5 5, P3D 0 5 1]
+testLevel = Level (P3D 0 0 1) [P3D 0 0 0, P3D 5 5 5, P3D 0 5 1, P3D 0 0 5]
 
-xAxis = Vector3 1 0 0 :: Vector3 R 
-yAxis = Vector3 0 1 0 :: Vector3 R
-zAxis = Vector3 0 0 1 :: Vector3 R 
+-- | Helpful OpenGL constants for rotation
+xAxis = G.Vector3 1 0 0 :: G.Vector3 R 
+yAxis = G.Vector3 0 1 0 :: G.Vector3 R
+zAxis = G.Vector3 0 0 1 :: G.Vector3 R 
 
 initGL :: IO (Event Input)
 initGL = do
@@ -47,34 +53,34 @@ initGL = do
     clearColor         $= Color4 0 0 0 0
     light (Light 0)    $= Enabled
     lighting           $= Enabled 
+    lightModelAmbient  $= Color4 0.5 0.5 0.5 1 
+    diffuse (Light 0)  $= Color4 1 1 1 1
     blend              $= Enabled
     blendFunc          $= (SrcAlpha, OneMinusSrcAlpha) 
     colorMaterial      $= Just (FrontAndBack, AmbientAndDiffuse)
     reshapeCallback    $= Just resizeScene
     return NoEvent
 
-renderGame :: Level -> GameState -> IO ()
-renderGame l (Game rotX rotY pPos) = do
+renderGame :: GameState -> IO ()
+renderGame (Game l rotX rotY pPos) = do
     loadIdentity
-    translate $ Vector3 (0 :: R) 0 (-1.5*(fromInteger $ size l))
+    translate $ G.Vector3 (0 :: R) 0 (-1.5*(fromInteger $ size l))
     rotate (rotX * 10) xAxis
     rotate (rotY * 10) yAxis
     color $ Color3 (1 :: R) 1 1
     position (Light 0) $= Vertex4 0 0 0 1  
-    lightModelAmbient $= Color4 0.5 0.5 0.5 1 
-    diffuse (Light 0) $= Color4 1 1 1 1
     renderObject Wireframe (Cube $ fromInteger $ size l)
-    renderPlayer $ startingPoint l
-    mapM_ renderObstacle $ obstacles l
+    renderPlayer pPos
+    mapM_ (renderObstacle . p3DtoV3) $ obstacles l
     flush
     where size2 :: R
           size2 = (fromInteger $ size l)/2
           green = Color4 0.8 1.0 0.7 0.9 :: Color4 R
           red   = Color4 1.0 0.7 0.8 1.0 :: Color4 R 
-          renderShapeAt s p3D = preservingMatrix $ do
-            translate $ Vector3 (0.5 - size2 + (fromInteger $ x p3D)) 
-                                (0.5 - size2 + (fromInteger $ y p3D)) 
-                                (0.5 - size2 + (fromInteger $ z p3D))
+          renderShapeAt s p = preservingMatrix $ do
+            translate $ G.Vector3 (0.5 - size2 + vector3X p)
+                                  (0.5 - size2 + vector3Y p)
+                                  (0.5 - size2 + vector3Z p)
             renderObject Solid s
           renderObstacle = (color green >>) . (renderShapeAt $ Cube 1)
           renderPlayer   = (color red >>) . (renderShapeAt $ Sphere' 0.5 20 20)
@@ -88,9 +94,10 @@ countHold = count >>> hold 0
 game :: SF GameState (IO ())
 game = arr $ (\gs -> do
         clear [ ColorBuffer, DepthBuffer ]
-        renderGame testLevel gs
+        renderGame gs
         flush)
 
+-- TODO: separate input from logic
 -- | Input
 parseInput :: SF (Event Input) GameState
 parseInput = proc i -> do
