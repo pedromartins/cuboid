@@ -38,6 +38,7 @@ data GameState = Game { level     :: Level,
 
 type R = Double
 
+-- TODO: List can't be empty!
 testLevel = Level (P3D 0 0 1) [P3D 0 0 0, P3D 5 5 5, P3D 0 5 1, P3D 0 0 5]
 
 -- | Helpful OpenGL constants for rotation
@@ -106,11 +107,11 @@ data ParsedInput =
 -- | Input
 parseInput :: SF (Event Input) ParsedInput
 parseInput = proc i -> do
-    down  <- keyDowns     -< i
-    ws    <- countKey 'w' -< down
-    as    <- countKey 'a' -< down
-    ss    <- countKey 's' -< down
-    ds    <- countKey 'd' -< down
+    down     <- keyDowns                        -< i
+    ws       <- countKey 'w'                    -< down
+    as       <- countKey 'a'                    -< down
+    ss       <- countKey 's'                    -< down
+    ds       <- countKey 'd'                    -< down
     upEvs    <- filterKey (SpecialKey KeyUp)    -< down
     downEvs  <- filterKey (SpecialKey KeyDown)  -< down
     rightEvs <- filterKey (SpecialKey KeyRight) -< down
@@ -123,7 +124,7 @@ parseInput = proc i -> do
 calculateState :: SF ParsedInput GameState
 calculateState = proc pi@(ParsedInput ws as ss ds _ _ _ _) -> do
     rec speed <- selectSpeed -< (pi, pos, speed)
-        pos <- (integral :: SF (Vector3 Double) (Vector3 Double)) -< speed
+        pos   <- (integral :: SF (Vector3 Double) (Vector3 Double)) -< speed
  
     -- TODO: watch for leak on ws/as/ss/ds
     returnA -< Game { level     = levelChoice,
@@ -133,18 +134,35 @@ calculateState = proc pi@(ParsedInput ws as ss ds _ _ _ _) -> do
 
     where calculatePPos pos = pos ^+^ (p3DtoV3 $ startingPoint levelChoice) 
           collision obss (_,pos,speed) = 
-            any (\obs -> norm ((calculatePPos pos) ^+^ (3 *^ speed) 
+            any (\obs -> norm ((calculatePPos pos) ^+^ (2 *^ speed)
                         ^-^ (p3DtoV3 obs)) <= 0.001) obss
           levelChoice = testLevel
-          zeroSpeed   = vector3 0 0 0
-          movingSpeed = vector3 0 0 0.5
+          xAxis = vector3 1 0 0 
+          yAxis = vector3 0 1 0
+          zAxis = vector3 0 0 1
+          v = 0.5
+
           boolToEvent = arr (\bool -> if bool then Event () else NoEvent)
-          -- TODO: ONLY SWITCHES ONCE! Use rSwitch!
-          selectSpeed :: SF (ParsedInput, Vector3 Double, Vector3 Double) (Vector3 Double)
-          selectSpeed = (constant zeroSpeed &&& arr (upEvs . (\(x,y,z) -> x))) `dSwitch`
-                          (\_ -> (constant movingSpeed &&&
-                                  (collision (obstacles levelChoice) ^>> boolToEvent)) `dSwitch`
-                                    (\_ -> constant zeroSpeed))
+
+          selectSpeed :: SF (ParsedInput, Vector3 Double, Vector3 Double) 
+                            (Vector3 Double)
+          selectSpeed = proc (pi, pos, speed) -> do
+            speedC <- drSwitch (constant zeroVector) -< 
+                (undefined, tagKeys (upEvs pi) speed ((-v) *^ zAxis) `merge` 
+                            tagKeys (downEvs pi) speed (v *^ zAxis) `merge`
+                            tagKeys (leftEvs pi) speed ((-v) *^ yAxis) `merge`
+                            tagKeys (rightEvs pi) speed (v *^ yAxis))
+            cols   <- collision (obstacles levelChoice) ^>> boolToEvent 
+                        -< (pi, pos, speedC)
+            speedf <- rSwitch (constant zeroVector) -< (speedC, tagCols cols) 
+            returnA -< speedf
+    
+          tagKeys event speed vector
+            | speed == zeroVector = event `tag` constant vector
+            | otherwise           = NoEvent
+          tagCols cols
+            | isNoEvent cols  = Event identity
+            | otherwise       = cols `tag` constant zeroVector
 
 -- | Main, initializes Yampa and sets up reactimation loop
 main :: IO ()
