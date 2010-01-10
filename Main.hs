@@ -26,8 +26,11 @@ p3DtoV3 (P3D x y z) = vector3 (fromInteger x) (fromInteger y) (fromInteger z)
 
 vectorApply f v = vector3 (f $ vector3X v) (f $ vector3Y v) (f $ vector3Z v)
 
-data Level = Level { startingPoint :: Point3D, obstacles :: [Point3D] }
+data Level = Level { startingPoint :: Point3D, 
+                     endPoint      :: Point3D,
+                     obstacles     :: [Point3D] }
 
+-- TODO: Memoize
 size :: Level -> Integer
 size = (+1) . maximum . map (\(P3D x y z) -> maximum [x,y,z]) . obstacles
 
@@ -39,7 +42,8 @@ data GameState = Game { level     :: Level,
 type R = Double
 
 -- TODO: List can't be empty!
-testLevel = Level (P3D 0 0 1) [P3D 0 0 0, P3D 5 5 5, P3D 0 5 1, P3D 0 0 5]
+testLevel = Level (P3D 0 0 1) (P3D 0 0 5) [P3D 0 0 0, P3D 5 5 5, P3D 0 5 1]
+testLevel2 = Level (P3D 0 0 1) (P3D 0 5 0) [P3D 5 5 5]
 
 -- | Helpful OpenGL constants for rotation
 xAxis = G.Vector3 1 0 0 :: G.Vector3 R 
@@ -73,12 +77,14 @@ renderGame (Game l rotX rotY pPos) = do
     position (Light 0) $= Vertex4 0 0 0 1  
     renderObject Wireframe (Cube $ fromInteger $ size l)
     renderPlayer pPos
+    renderGoal (p3DtoV3 $ endPoint l)
     mapM_ (renderObstacle . p3DtoV3) $ obstacles l
     flush
     where size2 :: R
           size2 = (fromInteger $ size l)/2
-          green = Color4 0.8 1.0 0.7 0.9 :: Color4 R
-          red   = Color4 1.0 0.7 0.8 1.0 :: Color4 R 
+          green  = Color4 0.8 1.0 0.7 0.9 :: Color4 R
+          greenG = Color4 0.8 1.0 0.7 1.0 :: Color4 R
+          red    = Color4 1.0 0.7 0.8 1.0 :: Color4 R 
           renderShapeAt s p = preservingMatrix $ do
             translate $ G.Vector3 (0.5 - size2 + vector3X p)
                                   (0.5 - size2 + vector3Y p)
@@ -86,6 +92,8 @@ renderGame (Game l rotX rotY pPos) = do
             renderObject Solid s
           renderObstacle = (color green >>) . (renderShapeAt $ Cube 1)
           renderPlayer   = (color red >>) . (renderShapeAt $ Sphere' 0.5 20 20)
+          renderGoal     = 
+            (color greenG >>) . (renderShapeAt $ Sphere' 0.5 20 20) 
 
 keyDowns :: SF (Event Input) (Event Input)
 keyDowns = arr $ filterE ((==Down) . keyState)
@@ -121,24 +129,38 @@ parseInput = proc i -> do
           filterKey k = arr $ filterE ((==k) . key)
 
 -- | Logic
+data WinLose = Win | Lose deriving (Eq)
+
 calculateState :: SF ParsedInput GameState
 calculateState = proc pi@(ParsedInput ws as ss ds _ _ _ _) -> do
-    rec speed <- selectSpeed -< (pi, pos, speed, obstacles levelChoice)
-        posi  <- (integral :: SF (Vector3 Double) (Vector3 Double)) -< speed
-        pos   <- arr calculatePPos -< posi
+    rec speed   <- rSwitch selectSpeed -< ((pi, pos, speed, obstacles level),
+                                           winLose `tag` selectSpeed)
+        posi    <- drSwitch (integral) -< (speed, winLose `tag` integral)
+        pos     <- arr calculatePPos -< (posi, level)
+        winLose <- arr testWinLoseCondition -< (pos, level) 
+        level   <- constant testLevel -< filterE (==Win) winLose
  
     -- TODO: watch for leak on ws/as/ss/ds
-    returnA -< Game { level     = levelChoice,
+    returnA -< Game { level     = level,
                       rotX      = (fromInteger $ (ws - ss)),
                       rotY      = (fromInteger $ (ds - as)),
                       playerPos = pos }
 
-    where calculatePPos pos = pos ^+^ (p3DtoV3 $ startingPoint levelChoice) 
-          levelChoice = testLevel
+    where calculatePPos (pos, level) = pos ^+^ (p3DtoV3 $ startingPoint level)
+          testBounds pos size = let sizeN = fromInteger size
+                                in vector3X pos > sizeN || vector3X pos < 0 ||
+                                   vector3Y pos > sizeN || vector3Y pos < 0 ||
+                                   vector3Z pos > sizeN || vector3Z pos < 0 
+          -- TODO: Abstract further?
+          testWinLoseCondition (pos, level)
+            | pos == (p3DtoV3 $ endPoint level) = Event Win
+            | testBounds pos (size level)       = Event Lose
+            | otherwise                         = NoEvent
 
 selectSpeed :: SF (ParsedInput, Vector3 Double, Vector3 Double, [Point3D]) 
                   (Vector3 Double)
 selectSpeed = proc (pi, pos, speed, obss) -> do
+    -- TODO: Get rid of the undefineds? 
     speedC <- drSwitch (constant zeroVector) -< 
         (undefined, tagKeys (upEvs pi) speed ((-v) *^ zAxis) `merge` 
                     tagKeys (downEvs pi) speed (v *^ zAxis) `merge`
