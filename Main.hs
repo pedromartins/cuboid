@@ -43,7 +43,9 @@ type R = Double
 
 -- TODO: List can't be empty!
 testLevel = Level (P3D 0 0 1) (P3D 0 0 5) [P3D 0 0 0, P3D 5 5 5, P3D 0 5 1]
-testLevel2 = Level (P3D 0 0 1) (P3D 0 5 0) [P3D 5 5 5]
+testLevel2 = Level (P3D 0 0 1) (P3D 0 4 1) [P3D 5 5 5]
+
+levels = concat (repeat [testLevel, testLevel2])
 
 -- | Helpful OpenGL constants for rotation
 xAxis = G.Vector3 1 0 0 :: G.Vector3 R 
@@ -133,12 +135,13 @@ data WinLose = Win | Lose deriving (Eq)
 
 calculateState :: SF ParsedInput GameState
 calculateState = proc pi@(ParsedInput ws as ss ds _ _ _ _) -> do
-    rec speed   <- rSwitch selectSpeed -< ((pi, pos, speed, obstacles level),
-                                           winLose `tag` selectSpeed)
-        posi    <- drSwitch (integral) -< (speed, winLose `tag` integral)
-        pos     <- arr calculatePPos -< (posi, level)
-        winLose <- arr testWinLoseCondition -< (pos, level) 
-        level   <- constant testLevel -< filterE (==Win) winLose
+    rec speed    <- rSwitch selectSpeed -< ((pi, pos, speed, obstacles level),
+                                            winLose `tag` selectSpeed)
+        posi     <- drSwitch (integral) -< (speed, winLose `tag` integral)
+        pos      <- arr calculatePPos -< (posi, level)
+        winLose  <- arr testWinLoseCondition -< (pos, level)
+        wins     <- arr (filterE (==Win)) >>> delayEvent 1 -< winLose 
+        level    <- countHold >>^ fromInteger >>^ (levels !!) -< wins 
  
     -- TODO: watch for leak on ws/as/ss/ds
     returnA -< Game { level     = level,
