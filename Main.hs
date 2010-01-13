@@ -38,7 +38,6 @@ size = (+1) . maximum . map (\(P3D x y z) -> maximum [x,y,z]) . obstacles
 
 data GameState = Game { level     :: Level,
                         rotX      :: Double, 
-                        rotY      :: Double, 
                         playerPos :: Vector3 Double }
 
 type R = Double
@@ -72,12 +71,11 @@ initGL = do
     return NoEvent
 
 renderGame :: GameState -> IO ()
-renderGame (Game l rotX rotY pPos) = do
+renderGame (Game l rotX pPos) = do
     loadIdentity
     translate $ G.Vector3 (0 :: R) 0 (-2*(fromInteger $ size l))
     -- TODO: calculate rotation axis based on rotX/Y
     rotate (rotX * 10) xAxis
-    rotate (rotY * 10) yAxis
     color $ Color3 (1 :: R) 1 1
     position (Light 0) $= Vertex4 0 0 0 1  
     renderObject Wireframe (Cube $ fromInteger $ size l)
@@ -149,7 +147,6 @@ calculateState = proc pi@(ParsedInput ws as ss ds _ _ _ _) -> do
     -- TODO: watch for leak on ws/as/ss/ds
     returnA -< Game { level     = level,
                       rotX      = (fromInteger $ (ws - ss)),
-                      rotY      = (fromInteger $ (ds - as)),
                       playerPos = pos }
 
     where calculatePPos (pos, level) = pos ^+^ (p3DtoV3 $ startingPoint level)
@@ -167,23 +164,13 @@ selectSpeed :: SF (ParsedInput, Vector3 Double, Vector3 Double, [Point3D])
                   (Vector3 Double)
 selectSpeed = proc (pi, pos, speed, obss) -> do
     let rotX = (fromInteger $ ((ws pi) - (ss pi)) `mod` 36 + 36) `mod` 36
-        rotY = (fromInteger $ ((ds pi) - (as pi)) `mod` 36 + 36) `mod` 36
-        theta | rotX >  32 = 0
-              | rotX >  23 = 3
-              | rotX >  14 = 2
-              | rotX >  5  = 1
-              | rotX >= 0  = 0
-        phi   | rotY >  32 = 0
-              | rotY >  23 = 1
-              | rotY >  14 = 2
-              | rotY >  5  = 3 
-              | rotY >= 0  = 0
+        theta = (((rotX - 6) `div` 9) + 1) `mod` 4
     -- TODO: Get rid of the undefineds? 
     speedC <- drSwitch (constant zeroVector) -< 
-        (undefined, tagKeys (upEvs pi) speed ((-v) *^ zAxis) theta phi `merge` 
-                    tagKeys (downEvs pi) speed (v *^ zAxis) theta phi `merge`
-                    tagKeys (leftEvs pi) speed ((-v) *^ xAxis) theta phi `merge`
-                    tagKeys (rightEvs pi) speed (v *^ xAxis) theta phi) 
+        (undefined, tagKeys (upEvs pi) speed ((-v) *^ zAxis) theta `merge` 
+                    tagKeys (downEvs pi) speed (v *^ zAxis) theta `merge`
+                    tagKeys (leftEvs pi) speed ((-v) *^ xAxis) theta `merge`
+                    tagKeys (rightEvs pi) speed (v *^ xAxis) theta) 
     cols   <- collision ^>> boolToEvent -< (obss, pos, speedC)
     speedf <- rSwitch (constant zeroVector) -< (speedC, tagCols cols) 
     returnA -< speedf
@@ -196,28 +183,23 @@ selectSpeed = proc (pi, pos, speed, obss) -> do
               any (\obs -> norm (pos ^+^ (2 *^ speed) ^-^ (p3DtoV3 obs)) 
                             <= 0.001) obss
           -- TODO: Confusing names, can they be generalized?
-          tagKeys event speed vector theta phi
+          tagKeys event speed vector theta
               | speed == zeroVector = event `tag` constant 
-                                        (vector3Rotate' theta phi vector)
+                                        (vector3Rotate' theta vector)
               | otherwise           = NoEvent
           tagCols cols
               | isNoEvent cols  = Event identity
               | otherwise       = cols `tag` constant zeroVector
           boolToEvent = arr (\bool -> if bool then Event () else NoEvent)
 
-vector3Rotate' :: (Integral a, RealFloat b) => a -> a -> Vector3 b -> Vector3 b
-vector3Rotate' theta phi v =
-  let rotatePhi 0 v = id v
-      rotatePhi 1 v = vector3 (vector3Z v)    (vector3Y v) (-(vector3X v))
-      rotatePhi 2 v = vector3 (-(vector3X v)) (vector3Y v) (-(vector3Z v)) 
-      rotatePhi 3 v = vector3 (-(vector3Z v)) (vector3Y v)   (vector3X v)
-      rotatePhi i v = rotatePhi (abs $ i `mod` 4) v
-      rotateTheta 0 v = id v                                
+vector3Rotate' :: (Integral a, RealFloat b) => a -> Vector3 b -> Vector3 b
+vector3Rotate' theta v =
+  let rotateTheta 0 v = id v                                
       rotateTheta 1 v = vector3 (vector3X v) (vector3Z v)    (-(vector3Y v))
       rotateTheta 2 v = vector3 (vector3X v) (-(vector3Y v)) (-(vector3Z v)) 
       rotateTheta 3 v = vector3 (vector3X v) (-(vector3Z v))   (vector3Y v)
       rotateTheta i _ = rotateTheta (abs $ i `mod` 4) v
-  in rotatePhi phi . rotateTheta theta $ v
+  in rotateTheta theta $ v
 
 -- | Main, initializes Yampa and sets up reactimation loop
 main :: IO ()

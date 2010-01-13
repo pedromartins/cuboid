@@ -2,8 +2,8 @@ Name:               anacube
 Version:            0.1
 Description:        Anaglyph 3D Puzzle Game
 License:            MIT
-Author:		    	Pedro Martins <pedromartins.pt@gmail.com>
-Maintainer:		    Pedro Martins <pedromartins.pt@gmail.com>
+Author:             Pedro Martins <pedromartins.pt@gmail.com>
+Maintainer:         Pedro Martins <pedromartins.pt@gmail.com>
 Build-Type:         Simple
 Cabal-Version:      >= 1.2
 
