@@ -6,7 +6,7 @@ import FRP.Yampa.Utilities
 
 import Graphics.UI.GLUT
 
--- | Event Definition:
+-- Event Definition:
 
 data Input = Keyboard { key       :: Key,
                         keyState  :: KeyState,
@@ -23,7 +23,7 @@ data ParsedInput =
                   upEvs    :: Event Input, downEvs :: Event Input, 
                   rightEvs :: Event Input, leftEvs :: Event Input }
                         
--- | Input
+-- Input
 parseInput :: SF (Event Input) ParsedInput
 parseInput = proc i -> do
     down     <- keyDowns                        -< i

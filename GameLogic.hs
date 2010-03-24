@@ -10,7 +10,7 @@ import qualified Graphics.UI.GLUT as G(Vector3(..))
 import Input
 import Game
 
--- | Logic
+-- Logic
 data WinLose = Win | Lose deriving (Eq)
 
 calculateState :: SF ParsedInput GameState

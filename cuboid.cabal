@@ -1,13 +1,13 @@
-Name:               anacube
+Name:               cuboid 
 Version:            0.1
-Description:        Anaglyph 3D Puzzle Game
+Description:        3D Puzzle Game
 License:            MIT
 Author:             Pedro Martins <pedromartins.pt@gmail.com>
 Maintainer:         Pedro Martins <pedromartins.pt@gmail.com>
 Build-Type:         Simple
 Cabal-Version:      >= 1.2
 
-Executable anacube
+Executable cuboid 
     Main-Is:        Main.hs
     Build-Depends:  base, Yampa, GLUT
 

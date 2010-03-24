@@ -9,7 +9,7 @@ import qualified Graphics.UI.GLUT as G(Vector3(..))
 
 import Game
 
--- | Helpful OpenGL constants for rotation
+-- Helpful OpenGL constants for rotation
 xAxis = G.Vector3 1 0 0 :: G.Vector3 R 
 yAxis = G.Vector3 0 1 0 :: G.Vector3 R
 zAxis = G.Vector3 0 0 1 :: G.Vector3 R
@@ -17,7 +17,7 @@ zAxis = G.Vector3 0 0 1 :: G.Vector3 R
 initGL :: IO ()
 initGL = do
     getArgsAndInitialize
-    createWindow "AnaCube!"
+    createWindow "Cuboid!"
     initialDisplayMode $= [ WithDepthBuffer ]
     depthFunc          $= Just Less
     clearColor         $= Color4 0 0 0 0
@@ -47,7 +47,7 @@ resizeScene s@(Size width height) = do
    h2 = half height
    half z = realToFrac z / 2
 
--- | Rendering Code:
+-- Rendering Code:
 
 renderGame :: GameState -> IO ()
 renderGame (Game l rotX pPos) = do
