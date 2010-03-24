@@ -4,10 +4,12 @@ Description:        3D Puzzle Game
 License:            MIT
 Author:             Pedro Martins <pedromartins.pt@gmail.com>
 Maintainer:         Pedro Martins <pedromartins.pt@gmail.com>
+Stability:          experimental
 Build-Type:         Simple
-Cabal-Version:      >= 1.2
+Cabal-Version:      >= 1.4
 
 Executable cuboid 
     Main-Is:        Main.hs
-    Build-Depends:  base, Yampa, GLUT
+    Other-Modules:  Game, GameLogic, Graphics, Input
+    Build-Depends:  base >= 3 && < 5, Yampa, GLUT
 
