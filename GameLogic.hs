@@ -25,7 +25,7 @@ calculateState = proc pi@(ParsedInput ws as ss ds _ _ _ _) -> do
  
     -- TODO: watch for leak on ws/as/ss/ds
     returnA -< Game { level     = level,
-                      rotX      = (fromInteger $ (ws - ss)),
+                      rotX      = realToFrac (ws - ss),
                       playerPos = pos }
 
     where calculatePPos (pos, level) = pos ^+^ (p3DtoV3 $ startingPoint level)
@@ -35,14 +35,14 @@ calculateState = proc pi@(ParsedInput ws as ss ds _ _ _ _) -> do
                                    vector3Z pos > sizeN || vector3Z pos < 0 
           -- TODO: Abstract further?
           testWinLoseCondition (pos, level)
-            | pos == (p3DtoV3 $ endPoint level) = Event Win
-            | testBounds pos (size level)       = Event Lose
-            | otherwise                         = NoEvent
+            | norm (pos ^-^ (p3DtoV3 $ endPoint level)) < 0.5 = Event Win
+            | testBounds pos (size level)                     = Event Lose
+            | otherwise                                       = NoEvent
 
 selectSpeed :: SF (ParsedInput, Vector3 R, Vector3 R, [Point3D]) 
                   (Vector3 R)
 selectSpeed = proc (pi, pos, speed, obss) -> do
-    let rotX = (fromInteger $ ((ws pi) - (ss pi)) `mod` 36 + 36) `mod` 36
+    let rotX = (fromInteger $ (floor $ (ws pi) - (ss pi)) `mod` 36 + 36) `mod` 36
         theta = (((rotX - 6) `div` 9) + 1) `mod` 4
     -- TODO: Get rid of the undefineds? 
     speedC <- drSwitch (constant zeroVector) -< 

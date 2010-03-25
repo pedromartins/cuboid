@@ -15,11 +15,16 @@ data Input = Keyboard { key       :: Key,
 keyDowns :: SF (Event Input) (Event Input)
 keyDowns = arr $ filterE ((==Down) . keyState)
 
-countHold :: SF (Event a) Integer
+countHold :: SF (Event a) Integer 
 countHold = count >>> hold 0
 
+keyIntegral :: Double -> SF (Event a) Double
+keyIntegral a = let eventToSpeed (Event _) = a
+                    eventToSpeed NoEvent   = 0 
+                in arr eventToSpeed >>> integral 
+
 data ParsedInput = 
-    ParsedInput { ws :: Integer, as :: Integer, ss :: Integer, ds :: Integer,
+    ParsedInput { ws :: Double, as :: Double, ss :: Double, ds :: Double,
                   upEvs    :: Event Input, downEvs :: Event Input, 
                   rightEvs :: Event Input, leftEvs :: Event Input }
                         
@@ -36,7 +41,7 @@ parseInput = proc i -> do
     rightEvs <- filterKey (SpecialKey KeyRight) -< down
     leftEvs  <- filterKey (SpecialKey KeyLeft)  -< down
     returnA -< ParsedInput ws as ss ds upEvs downEvs rightEvs leftEvs
-    where countKey c  = filterE ((==(Char c)) . key) ^>> countHold
+    where countKey c  = filterE ((==(Char c)) . key) ^>> keyIntegral 1
           filterKey k = arr $ filterE ((==k) . key)
 
 

@@ -1,9 +1,28 @@
 Name:               cuboid 
-Version:            0.1
-Description:        3D Puzzle Game
+Category:           Game
+Description:
+
+    A simple 3D puzzle game made with Yampa and GLUT.  The objective
+    of the game is to get the red sphere to the green sphere, by
+    moving the red sphere.
+    .
+    Use the W and D keys to rotate the cube, and the arrow keys
+    (up\/down\/left\/right), to move the red ball (front\/back\/left\/right
+    respectively).  The red sphere will then move until it hits an
+    obstacle (green cube) and then stops.
+    .
+    In order to add levels check out Game.hs. If you come up with
+    a great level do send it to me. I plan to extract the levels
+    into a configuration file in the future.
+
+Synopsis:           3D Yampa/GLUT Puzzle Game 
+Version:            0.12
 License:            MIT
+License-file:       LICENSE
+Copyright:          (C) 2010 Pedro Martins
 Author:             Pedro Martins <pedromartins.pt@gmail.com>
 Maintainer:         Pedro Martins <pedromartins.pt@gmail.com>
+Bug-Reports:        http://github.com/pedromartins/cuboid/issues
 Stability:          experimental
 Build-Type:         Simple
 Cabal-Version:      >= 1.4
