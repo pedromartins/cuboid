@@ -14,12 +14,9 @@ Description:
     In order to add levels check out Game.hs. If you come up with
     a great level do send it to me. I plan to extract the levels
     into a configuration file in the future.
-    .
-    A slightly modified version of Yampa was included, which exports
-    the constructors that allow building new complex stateful operators
 
 Synopsis:           3D Yampa/GLUT Puzzle Game 
-Version:            0.13
+Version:            0.14
 License:            MIT
 License-file:       LICENSE
 Copyright:          (C) 2010 Pedro Martins
@@ -29,10 +26,9 @@ Bug-Reports:        http://github.com/pedromartins/cuboid/issues
 Stability:          experimental
 Build-Type:         Simple
 Cabal-Version:      >= 1.6
-Extra-Source-Files: FRP/*.hs, FRP/Yampa/*.hs
 
 Executable cuboid 
     Main-Is:            Main.hs
     Other-Modules:      Game, GameLogic, Graphics, Input
-    Build-Depends:      base >= 3 && < 5, random, GLUT
+    Build-Depends:      base >= 3 && < 5, Yampa, GLUT
 

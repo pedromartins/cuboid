@@ -14,15 +14,10 @@ import Game
 data WinLose = Win | Lose deriving (Eq)
 
 -- Snapping integral 
-{-# INLINE integral' #-}
-integral' = SF {sfTF = tf0}
-    where igrl0  = zeroVector
-          tf0 a0 = (integralAux igrl0 a0, igrl0)
-          integralAux igrl a_prev = SF' tf -- True
-            where tf dt a = (integralAux igrl' a, igrl')
-                    where igrl' | a_prev == zeroVector = 
-                                    vectorApply (fromIntegral . round) igrl
-                                | otherwise  = igrl ^+^ realToFrac dt *^ a_prev
+integral' = (iPre zeroVector &&& time) >>> sscan f (zeroVector, 0) >>> arr fst
+    where f (prevVal, prevTime) (val, time) 
+            | val == zeroVector = (vectorApply (fromIntegral . round) prevVal, time)
+            | otherwise        = (prevVal ^+^ (realToFrac $ time - prevTime) *^ val, time)
 
 calculateState :: SF ParsedInput GameState
 calculateState = proc pi@(ParsedInput ws as ss ds _ _ _ _) -> do
