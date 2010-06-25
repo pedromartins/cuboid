@@ -17,8 +17,8 @@ zAxis = G.Vector3 0 0 1 :: G.Vector3 R
 initGL :: IO ()
 initGL = do
     getArgsAndInitialize
-    initialDisplayMode $= [ WithDepthBuffer, DoubleBuffered ]
     createWindow "Cuboid!"
+    initialDisplayMode $= [ WithDepthBuffer ]
     depthFunc          $= Just Less
     clearColor         $= Color4 0 0 0 0
     light (Light 0)    $= Enabled
@@ -81,6 +81,5 @@ game :: SF GameState (IO ())
 game = arr $ (\gs -> do
         clear [ ColorBuffer, DepthBuffer ]
         renderGame gs
-        flush
-        swapBuffers)
+        flush)
 

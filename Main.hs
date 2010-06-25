@@ -33,7 +33,7 @@ idle newInput oldTime rh = do
     newTime'  <- get elapsedTime
     oldTime'  <- get oldTime
     let dt = let dt' = (fromIntegral $ newTime' - oldTime')/50
-             in if dt' < 1 then dt' else 1 
+             in if dt' < 0.8 then dt' else 0.8
     react rh (dt, Just newInput')
     writeIORef oldTime newTime'
     return ()
