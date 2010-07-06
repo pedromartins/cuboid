@@ -16,7 +16,7 @@ Description:
     into a configuration file in the future.
 
 Synopsis:           3D Yampa/GLUT Puzzle Game 
-Version:            0.14
+Version:            0.14.1
 License:            MIT
 License-file:       LICENSE
 Copyright:          (C) 2010 Pedro Martins

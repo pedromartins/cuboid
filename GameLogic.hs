@@ -1,4 +1,4 @@
-{-# LANGUAGE Arrows #-}
+{-# LANGUAGE Arrows, BangPatterns #-}
 module GameLogic where
 
 import FRP.Yampa
@@ -15,7 +15,7 @@ data WinLose = Win | Lose deriving (Eq)
 
 -- Snapping integral 
 integral' = (iPre zeroVector &&& time) >>> sscan f (zeroVector, 0) >>> arr fst
-    where f (prevVal, prevTime) (val, time) 
+    where f (!prevVal, !prevTime) (!val, !time) 
             | val == zeroVector = (vectorApply (fromIntegral . round) prevVal, time)
             | otherwise        = (prevVal ^+^ (realToFrac $ time - prevTime) *^ val, time)
 
