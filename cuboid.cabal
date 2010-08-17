@@ -29,6 +29,6 @@ Cabal-Version:      >= 1.6
 
 Executable cuboid 
     Main-Is:            Main.hs
-    Other-Modules:      Game, GameLogic, Graphics, Input
+    Other-Modules:      Types, Utils, Config, Input, Update, Graphics
     Build-Depends:      base >= 3 && < 5, Yampa, GLUT
 

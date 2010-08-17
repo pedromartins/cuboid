@@ -1,4 +1,4 @@
-module Graphics where
+module Graphics (initGL, draw) where
 
 import FRP.Yampa
 import FRP.Yampa.Vector3
@@ -7,7 +7,8 @@ import FRP.Yampa.Utilities
 import Graphics.UI.GLUT hiding (Level,Vector3(..),normalize)
 import qualified Graphics.UI.GLUT as G(Vector3(..))
 
-import Game
+import Types
+import Utils
 
 -- Helpful OpenGL constants for rotation
 xAxis = G.Vector3 1 0 0 :: G.Vector3 R 
@@ -77,8 +78,8 @@ renderGame (Game l rotX pPos) = do
           renderGoal     = 
             (color greenG >>) . (renderShapeAt $ Sphere' 0.5 20 20) 
 
-game :: SF GameState (IO ())
-game = arr $ (\gs -> do
+draw :: SF GameState (IO ())
+draw = arr $ (\gs -> do
         clear [ ColorBuffer, DepthBuffer ]
         renderGame gs
         flush)

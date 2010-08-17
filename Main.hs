@@ -6,9 +6,12 @@ import Graphics.UI.GLUT hiding (Level,Vector3(..),normalize)
 
 import Data.IORef
 
-import Graphics
+import Types
 import Input
-import GameLogic
+import Update 
+import Graphics
+
+mainSF = parseInput >>> update >>> draw 
 
 -- | Main, initializes Yampa and sets up reactimation loop
 main :: IO ()
@@ -16,7 +19,7 @@ main = do
     newInput <- newIORef NoEvent
     oldTime <- newIORef (0 :: Int)
     rh <- reactInit (initGL >> return NoEvent) (\_ _ b -> b >> return False) 
-                    (parseInput >>> calculateState >>> game)
+                    mainSF
     displayCallback $= return ()
     keyboardMouseCallback $= Just 
         (\k ks m _ -> writeIORef newInput (Event $ Keyboard k ks m))

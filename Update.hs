@@ -1,5 +1,5 @@
-{-# LANGUAGE Arrows, BangPatterns #-}
-module GameLogic where
+{-# LANGUAGE Arrows, BangPatterns, NamedFieldPuns #-}
+module Update (update) where
 
 import FRP.Yampa
 import FRP.Yampa.Vector3
@@ -7,8 +7,10 @@ import FRP.Yampa.Utilities
 import Graphics.UI.GLUT hiding (Level,Vector3(..),normalize)
 import qualified Graphics.UI.GLUT as G(Vector3(..))
 
+import Types 
+import Utils
+import Config
 import Input
-import Game
 
 -- Logic
 data WinLose = Win | Lose deriving (Eq)
@@ -16,11 +18,13 @@ data WinLose = Win | Lose deriving (Eq)
 -- Snapping integral 
 integral' = (iPre zeroVector &&& time) >>> sscan f (zeroVector, 0) >>> arr fst
     where f (!prevVal, !prevTime) (!val, !time) 
-            | val == zeroVector = (vectorApply (fromIntegral . round) prevVal, time)
-            | otherwise        = (prevVal ^+^ (realToFrac $ time - prevTime) *^ val, time)
+            | val == zeroVector = 
+                (vectorApply (fromIntegral . round) prevVal, time)
+            | otherwise         = 
+                (prevVal ^+^ (realToFrac $ time - prevTime) *^ val, time)
 
-calculateState :: SF ParsedInput GameState
-calculateState = proc pi@(ParsedInput ws as ss ds _ _ _ _) -> do
+update :: SF ParsedInput GameState
+update = proc pi@(ParsedInput{ wCount, aCount, sCount, dCount }) -> do
     rec speed    <- rSwitch selectSpeed -< ((pi, pos, speed, obstacles level),
                                             winLose `tag` selectSpeed)
         posi     <- drSwitch (integral') -< (speed, winLose `tag` integral')
@@ -29,9 +33,9 @@ calculateState = proc pi@(ParsedInput ws as ss ds _ _ _ _) -> do
         wins     <- arr (filterE (==Win)) >>> delayEvent 1 -< winLose 
         level    <- countHold >>^ fromInteger >>^ (levels !!) -< wins 
  
-    -- TODO: watch for leak on ws/as/ss/ds
+    -- TODO: watch for leak on wCount/aCount/sCount/dCount
     returnA -< Game { level     = level,
-                      rotX      = realToFrac (ws - ss),
+                      rotX      = realToFrac (wCount - sCount),
                       playerPos = pos }
 
     where calculatePPos (pos, level) = pos ^+^ (p3DtoV3 $ startingPoint level)
@@ -44,11 +48,13 @@ calculateState = proc pi@(ParsedInput ws as ss ds _ _ _ _) -> do
             | norm (pos ^-^ (p3DtoV3 $ endPoint level)) < 0.5 = Event Win
             | testBounds pos (size level)                     = Event Lose
             | otherwise                                       = NoEvent
+          countHold = count >>> hold 0
 
 selectSpeed :: SF (ParsedInput, Vector3 R, Vector3 R, [Point3D]) 
                   (Vector3 R)
 selectSpeed = proc (pi, pos, speed, obss) -> do
-    let rotX = (fromInteger $ (floor $ (ws pi) - (ss pi)) `mod` 36 + 36) `mod` 36
+    let rotX = (fromInteger $ (floor $ (wCount pi) - (sCount pi)) 
+                                `mod` 36 + 36) `mod` 36
         theta = (((rotX - 6) `div` 9) + 1) `mod` 4
     -- TODO: Get rid of the undefined? 
     speedC <- drSwitch (constant zeroVector) -< 
