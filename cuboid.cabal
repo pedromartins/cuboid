@@ -1,4 +1,4 @@
-Name:               cuboid 
+Name:               cuboid
 Category:           Game
 Description:
 
@@ -15,7 +15,7 @@ Description:
     a great level do send it to me. I plan to extract the levels
     into a configuration file in the future.
 
-Synopsis:           3D Yampa/GLUT Puzzle Game 
+Synopsis:           3D Yampa/GLUT Puzzle Game
 Version:            0.14.1
 License:            MIT
 License-file:       LICENSE
@@ -27,8 +27,7 @@ Stability:          experimental
 Build-Type:         Simple
 Cabal-Version:      >= 1.6
 
-Executable cuboid 
+Executable cuboid
     Main-Is:            Main.hs
     Other-Modules:      Types, Utils, Config, Input, Update, Graphics
-    Build-Depends:      base >= 3 && < 5, Yampa, GLUT
-
+    Build-Depends:      base >= 3 && < 5, Yampa, GLUT >= 2.3
