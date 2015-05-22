@@ -17,11 +17,10 @@ Use the W and D keys to rotate the cube, and the arrow keys
 respectively).  The red sphere will then move until it hits an
 obstacle (green cube) and then stops.
 
-In order to add levels check out Game.hs. If you come up with a
-great level do send it to me. I plan to extract the levels into a
-configuration file, soon(ish).
+In order to add levels check out Config.hs. If you come up with a
+great level do send it to me.
 
 Hope this helps people get into Yampa and FRP for game development,
 as it's quite fun!
 
-Pedro 
+Pedro

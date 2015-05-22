@@ -11,9 +11,8 @@ Description:
     respectively).  The red sphere will then move until it hits an
     obstacle (green cube) and then stops.
     .
-    In order to add levels check out Game.hs. If you come up with
-    a great level do send it to me. I plan to extract the levels
-    into a configuration file in the future.
+    In order to add levels check out Config.hs. If you come up with
+    a great level do send it to me.
 
 Synopsis:           3D Yampa/GLUT Puzzle Game
 Version:            0.14.2
