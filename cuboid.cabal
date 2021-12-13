@@ -29,4 +29,4 @@ Cabal-Version:      >= 1.6
 Executable cuboid
     Main-Is:            Main.hs
     Other-Modules:      Types, Utils, Config, Input, Update, Graphics
-    Build-Depends:      base >= 3 && < 5, Yampa, GLUT >= 2.3
+    Build-Depends:      base >= 3 && < 5, Yampa <= 0.12, GLUT >= 2.3
